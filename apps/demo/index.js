@@ -1,0 +1,1 @@
+console.log('Hello from the demo project!');
