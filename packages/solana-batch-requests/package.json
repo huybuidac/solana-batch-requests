@@ -1,6 +1,6 @@
 {
   "name": "solana-batch-requests",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Solana batch requests package",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -32,5 +32,10 @@
     "@solana/web3.js": "^1.95.3",
     "lodash": "^4.17.21",
     "rxjs": "^7.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/huybuidac/solana-batch-requests.git",
+    "directory": "packages/solana-batch-requests"
   }
 }
