@@ -4,7 +4,7 @@ Solana Batch Requests is an npm package that allows you to batch multiple reques
 
 ## Installation
 
-To install the package, use npm, yarn, pnpm, bun or whatever package manager you like.
+To install the package, use npm, yarn, pnpm, bun, or any other package manager you prefer.
 
 ```bash
 npm install solana-batch-requests
@@ -29,40 +29,54 @@ const [account1, account2] = await Promise.all([
 
 ### Sample with Anchor
 
-Anchor is so good framework, but when you want to fetch account data, you have to fetch them one by one.
+Anchor is a powerful framework, but fetching account data typically requires individual requests for each account.
 
 ```ts
-// https://github.com/solana-developers/pirate-bootcamp/blob/14e7313fbdfffc63e0a42744e6be708c2b7a38a0/quest-6/idle-game/app/src/components/Game.tsx#L145
+// Reference: https://github.com/solana-developers/pirate-bootcamp/blob/14e7313fbdfffc63e0a42744e6be708c2b7a38a0/quest-6/idle-game/app/src/components/Game.tsx#L145
 export function FC() {
   // ...
-  const program = new Program<IdleGame>(IDL, IDLE_GAME_PROGRAM_ID, provider)
+  const program = new Program<IdleGame>(IDL, IDLE_GAME_PROGRAM_ID, provider);
 
-  useEffect(async () => {
-    const game1 = await program.account.gameData.fetch(gameDataPDA1)
-    const game2 = await program.account.gameData.fetch(gameDataPDA2)
-    const game3 = await program.account.gameData.fetch(gameDataPDA3)
-  }, [program])
+  useEffect(() => {
+    const fetchData = async () => {
+      const game1 = await program.account.gameData.fetch(gameDataPDA1);
+      const game2 = await program.account.gameData.fetch(gameDataPDA2);
+      const game3 = await program.account.gameData.fetch(gameDataPDA3);
+    };
+    fetchData();
+  }, [program]);
 }
 ```
 
-It will be better if you can fetch them in a single request.
+To enhance efficiency, consider fetching multiple accounts in a single request.
 
 ```ts
 import { getParsedAccountInBatch } from 'solana-batch-requests';
 
 export function FC() {
   // ...
-  const {connection} = useConnection()
-  const program = new Program<IdleGame>(IDL, IDLE_GAME_PROGRAM_ID, provider)
+  const { connection } = useConnection();
+  const program = new Program<IdleGame>(IDL, IDLE_GAME_PROGRAM_ID, provider);
 
-  useEffect(async () => {
-    // 3 accounts fetched in a single request
-    const gameAccounts = await Promise.all([
-      getParsedAccountInBatch(connection, gameDataPDA1),
-      getParsedAccountInBatch(connection, gameDataPDA2),
-      getParsedAccountInBatch(connection, gameDataPDA3),
-    ])
-    const gameParseds = gameAccounts.map((acc) => program.coder.accounts.decode("gameData", acc.data))
-  }, [program])
+  // Fetch multiple accounts in a single request, improving performance
+  useEffect(() => {
+    const fetchData = async () => {
+      const gameAccounts = await Promise.all([
+        getParsedAccountInBatch(connection, gameDataPDA1),
+        getParsedAccountInBatch(connection, gameDataPDA2),
+        getParsedAccountInBatch(connection, gameDataPDA3),
+      ]);
+      const gameParseds = gameAccounts.map((acc) => program.coder.accounts.decode("gameData", acc.data));
+    };
+    fetchData();
+  }, [program]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const acc = await getParsedAccountInBatch(connection, gameDataPDA4);
+      const gameParsed4 = program.coder.accounts.decode("gameData", acc.data);
+    };
+    fetchData();
+  }, [program]);
 }
 ```

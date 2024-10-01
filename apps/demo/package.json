@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@solana/web3.js": "^1.95.3",
     "solana-batch-requests": "workspace:*"
   }
 }

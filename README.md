@@ -1,81 +1,84 @@
-# Turborepo starter
+For more detailed documentation, please refer to the [Solana Batch Requests README](./packages/solana-batch-requests/README.md).
 
-This is an official starter Turborepo.
+# Solana Batch Requests
 
-## Using this example
+Solana Batch Requests is an npm package that allows you to batch multiple requests to the Solana blockchain, optimizing the number of network calls and improving performance.
 
-Run the following command:
+## Installation
 
-```sh
-npx create-turbo@latest
+To install the package, use npm, yarn, pnpm, bun, or any other package manager you prefer.
+
+```bash
+npm install solana-batch-requests
 ```
 
-## What's inside?
+## Usage
 
-This Turborepo includes the following packages/apps:
+### Fetch Multiple Accounts in a Single Request
 
-### Apps and Packages
+```ts
+import { getParsedAccountInBatch } from 'solana-batch-requests';
+import { Connection, PublicKey } from '@solana/web3.js';
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
+const [account1, account2] = await Promise.all([
+  getParsedAccountInBatch(connection, new PublicKey('tKeYE4wtowRb8yRroZShTipE18YVnqwXjsSAoNsFU6g')),
+  getParsedAccountInBatch(connection, new PublicKey('JDWYBjxEvEWt8yPhdb6BhNerfXaiXogRgUX2yW2AHUVb')),
+]);
 ```
-cd my-turborepo
-pnpm build
-```
+**Note:** Although multiple accounts are fetched using two function calls, the library optimizes the process by consolidating these into a single request to the Solana blockchain. This approach significantly reduces network overhead and enhances performance.
 
-### Develop
+### Sample with Anchor
 
-To develop all apps and packages, run the following command:
+Anchor is a powerful framework, but fetching account data typically requires individual requests for each account.
 
-```
-cd my-turborepo
-pnpm dev
+```ts
+// Reference: https://github.com/solana-developers/pirate-bootcamp/blob/14e7313fbdfffc63e0a42744e6be708c2b7a38a0/quest-6/idle-game/app/src/components/Game.tsx#L145
+export function FC() {
+  // ...
+  const program = new Program<IdleGame>(IDL, IDLE_GAME_PROGRAM_ID, provider);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const game1 = await program.account.gameData.fetch(gameDataPDA1);
+      const game2 = await program.account.gameData.fetch(gameDataPDA2);
+      const game3 = await program.account.gameData.fetch(gameDataPDA3);
+    };
+    fetchData();
+  }, [program]);
+}
 ```
 
-### Remote Caching
+To enhance efficiency, consider fetching multiple accounts in a single request.
 
-Turborepo can use a technique known as [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+```ts
+import { getParsedAccountInBatch } from 'solana-batch-requests';
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup), then enter the following commands:
+export function FC() {
+  // ...
+  const { connection } = useConnection();
+  const program = new Program<IdleGame>(IDL, IDLE_GAME_PROGRAM_ID, provider);
 
+  // Fetch multiple accounts in a single request, improving performance
+  useEffect(() => {
+    const fetchData = async () => {
+      const gameAccounts = await Promise.all([
+        getParsedAccountInBatch(connection, gameDataPDA1),
+        getParsedAccountInBatch(connection, gameDataPDA2),
+        getParsedAccountInBatch(connection, gameDataPDA3),
+      ]);
+      const gameParseds = gameAccounts.map((acc) => program.coder.accounts.decode("gameData", acc.data));
+    };
+    fetchData();
+  }, [program]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const acc = await getParsedAccountInBatch(connection, gameDataPDA4);
+      const gameParsed4 = program.coder.accounts.decode("gameData", acc.data);
+    };
+    fetchData();
+  }, [program]);
+}
 ```
-cd my-turborepo
-npx turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-npx turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turbo.build/repo/docs/core-concepts/monorepos/running-tasks)
-- [Caching](https://turbo.build/repo/docs/core-concepts/caching)
-- [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching)
-- [Filtering](https://turbo.build/repo/docs/core-concepts/monorepos/filtering)
-- [Configuration Options](https://turbo.build/repo/docs/reference/configuration)
-- [CLI Usage](https://turbo.build/repo/docs/reference/command-line-reference)
