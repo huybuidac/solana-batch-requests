@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { getParsedAccountInBatch, setSolanaBatchRequestsConfig } from '.';
+import { getParsedAccountInBatch, setSolanaBatchRequestsConfig, teardownBatchRequests } from '.';
 
 describe('solana-batch-requests', () => {
   let connection: any;
@@ -7,7 +7,12 @@ describe('solana-batch-requests', () => {
     connection = new Connection('https://api.devnet.solana.com', 'confirmed');
     setSolanaBatchRequestsConfig({
       timeWindow: 100,
+      maximumBatchSize: 3
     });
+  });
+  afterAll(async () => {
+    teardownBatchRequests();
+    await delay(1000);
   });
   it('fetch 1 account OK', async () => {
     const account = await getParsedAccountInBatch(
@@ -83,4 +88,42 @@ describe('solana-batch-requests', () => {
       undefined
     );
   });
+  it('Time window, mut request after 100ms from first request', async () => {
+    const connection = {
+      rpcEndpoint: 'mock-url3',
+      getMultipleParsedAccounts: jest.fn((arg: any, config: any) => {
+        return Promise.resolve({
+          value: [{}, {}],
+        });
+      }),
+    } as any;
+
+    const task1 = getParsedAccountInBatch(connection, new PublicKey('tKeYE4wtowRb8yRroZShTipE18YVnqwXjsSAoNsFU6g'));
+    await delay(70);
+    const task2 = getParsedAccountInBatch(connection, new PublicKey('JDWYBjxEvEWt8yPhdb6BhNerfXaiXogRgUX2yW2AHUVb'));
+    await delay(50);
+    const task3 = getParsedAccountInBatch(connection, new PublicKey('A8y5pthGCm9247db3vFspvQDWZpANMByr23ekHMGVQ5W'));
+    await Promise.all([task1, task2, task3]);
+
+    expect(connection.getMultipleParsedAccounts).toHaveBeenCalledTimes(2);
+  });
+  it('Maximum batch size', async () => {
+    const connection = {
+      rpcEndpoint: 'mock-url4',
+      getMultipleParsedAccounts: jest.fn((arg: any, config: any) => {
+        return Promise.resolve({
+          value: [{}, {}, {}],
+        });
+      }),
+    } as any;
+    await Promise.all([
+      getParsedAccountInBatch(connection, new PublicKey('tKeYE4wtowRb8yRroZShTipE18YVnqwXjsSAoNsFU6g')),
+      getParsedAccountInBatch(connection, new PublicKey('JDWYBjxEvEWt8yPhdb6BhNerfXaiXogRgUX2yW2AHUVb')),
+      getParsedAccountInBatch(connection, new PublicKey('A8y5pthGCm9247db3vFspvQDWZpANMByr23ekHMGVQ5W')),
+      getParsedAccountInBatch(connection, new PublicKey('EjE49XNdiLbPGiUHXdN73vnxv85TtjzSoZCp2t2Q5wms')),
+    ]);
+    expect(connection.getMultipleParsedAccounts).toHaveBeenCalledTimes(2);
+  });
 });
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
